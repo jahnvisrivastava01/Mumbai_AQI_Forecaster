@@ -9,19 +9,30 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
   <link rel="stylesheet" href="style.css">
+  <script>
+    // Apply the saved theme before the page paints, so there's no flash
+    try { const t = localStorage.getItem('theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
 </head>
 <body>
   <main class="page">
     <header class="head">
       <div class="head-text">
-        <p class="eyebrow">Air quality forecast · Mumbai</p>
+        <p class="eyebrow">Air quality forecast · Mumbai region</p>
         <h1>Mumbai AQI Forecaster</h1>
         <p class="take" id="takeaway">Loading data…</p>
         <p class="source" id="source-note"></p>
       </div>
-      <label class="control" for="station">Station
-        <select id="station"></select>
-      </label>
+      <div class="controls">
+        <label class="control" for="station">Station
+          <select id="station"></select>
+        </label>
+        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to light theme">
+          <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+          <span id="theme-label">Light</span>
+        </button>
+      </div>
     </header>
 
     <section class="tiles" aria-label="Headline figures">
@@ -47,6 +58,17 @@
       </div>
     </section>
 
+    <section class="card best" id="best-time" aria-labelledby="best-title">
+      <div class="best-head">
+        <div>
+          <h2 id="best-title">Best time to go outside</h2>
+          <p class="best-answer" id="best-answer">—</p>
+        </div>
+        <p class="best-note">Cleanest 2-hour window between 6 AM and 10 PM in the next 24 hours: the forecast AQI shaped by this area's usual hour-by-hour pattern.</p>
+      </div>
+      <div class="strip" id="best-strip"></div>
+    </section>
+
     <section class="grid">
       <article class="card wide" id="forecast">
         <h2>Forecast vs measured AQI</h2>
@@ -61,7 +83,7 @@
 
       <article class="card" id="map">
         <h2>Station map</h2>
-        <p>Monitoring stations placed by latitude and longitude, colored by current AQI category. Click a station to see its forecast.</p>
+        <p>Every monitoring station across Mumbai, Navi Mumbai and Thane, placed by latitude and longitude and colored by current AQI category. Hover for details; click to see its forecast.</p>
         <div class="chart h-map" id="chart-map"></div>
       </article>
 
@@ -77,6 +99,13 @@
         <div class="chart h-weather" id="chart-weather"></div>
       </article>
 
+      <article class="card wide" id="heatmap">
+        <h2>When is the air worst?</h2>
+        <p>Typical hourly <span id="heatmap-pollutant">PM2.5</span> by day of week and hour, from the last 90 days of readings. Colors run from this area's cleanest hours (green) to its worst (deep red), so the hours to avoid stand out.</p>
+        <div class="chart" id="chart-heatmap"></div>
+        <div class="scale-legend" id="heatmap-legend"></div>
+      </article>
+
       <article class="card wide" id="alerts">
         <h2>Health alerts by area</h2>
         <p>Current reading at every station, worst first, with CPCB health advice. Click a row to see that station's forecast.</p>
@@ -90,7 +119,7 @@
 
       <article class="card wide" id="models">
         <h2>Model comparison</h2>
-        <p>Error on the most recent 14 days, held out from training, in AQI points (lower is better). Persistence repeats the same hour from the last observed day. Best model per horizon in bold.</p>
+        <p>Error on the most recent 14 days, held out from training, in AQI points (lower is better). Persistence repeats the same hour from the last observed day. The “without neighbour data” row is the same model trained without nearby and upwind stations, showing what those features add. Best model per horizon in bold.</p>
         <div class="tablewrap">
           <table class="table">
             <thead><tr><th>Model</th><th>Horizon</th><th class="num">MAE</th><th class="num">RMSE</th></tr></thead>

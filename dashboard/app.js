@@ -12,6 +12,15 @@
   const catColor = (c) => ({ Good: css('--ok'), Satisfactory: css('--ok'), Moderate: css('--warn') })[c] || css('--bad');
   const setText = (id, v) => { document.getElementById(id).textContent = v; };
 
+  // Colourful AQI scale shared by the heatmap and the best-time strip (CPCB-style bands)
+  const aqiColor = d3.scaleLinear()
+    .domain([0, 50, 100, 200, 300, 400, 500])
+    .range(['#2e9e5b', '#5cb85f', '#a8c94b', '#ecc443', '#ef8a35', '#dc4a3d', '#8e2b5c'])
+    .interpolate(d3.interpolateHcl).clamp(true);
+  const inkOn = (fill) => { const c = d3.rgb(fill); return (0.299 * c.r + 0.587 * c.g + 0.114 * c.b) > 150 ? '#14181a' : '#ffffff'; };
+  const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const hourLabel = (h) => `${h % 12 || 12} ${h < 12 ? 'AM' : 'PM'}`;
+
   function showTip(lines, x, y) {
     tip.replaceChildren(...lines.map(([text, muted]) => {
       const d = document.createElement('div');
@@ -266,6 +275,145 @@
     g.append('text').attr('class', 'tick-label').attr('x', (d) => x(d.v) + 6).attr('y', (d) => y(d.f) + y.bandwidth() / 2).attr('dy', '0.32em').text((d) => d.v.toFixed(1));
   }
 
+  // ---------- best time to go outside ----------
+  function renderBestTime() {
+    const strip = document.getElementById('best-strip');
+    const answer = document.getElementById('best-answer');
+    const fc = state.data.hourly.filter((r) => r.station === state.station && r.kind === 'forecast')
+      .sort((a, b) => a.t - b.t).slice(0, 24);
+    strip.replaceChildren();
+    answer.replaceChildren();
+    if (fc.length < 2) { answer.textContent = 'No forecast available for this station.'; return; }
+
+    // AQI is a 24-hour average, so on its own it hardly changes hour to hour. Shape it with this
+    // area's typical hourly pattern: expected = forecast AQI × (usual level at that hour / daily mean).
+    const prof = (state.data.profile || []).filter((r) => r.station === state.station);
+    const typical = new Map(prof.map((r) => [`${r.dow}-${r.hour}`, r.value]));
+    const meanTypical = d3.mean(prof, (r) => r.value);
+    const dowOf = (t) => (t.getDay() + 6) % 7;   // Monday = 0, matching the pipeline
+    for (const d of fc) {
+      const v = typical.get(`${dowOf(d.t)}-${d.t.getHours()}`);
+      d.est = Math.round(v && meanTypical ? d.aqi * (v / meanTypical) : d.aqi);
+    }
+
+    // Cleanest 2-hour window that starts and ends between 6 AM and 10 PM
+    const awake = (t) => t.getHours() >= 6 && t.getHours() <= 21;
+    let best = null;
+    for (let i = 0; i < fc.length - 1; i++) {
+      if (!awake(fc[i].t) || !awake(fc[i + 1].t)) continue;
+      const avg = (fc[i].est + fc[i + 1].est) / 2;
+      if (!best || avg < best.avg) best = { i, avg };
+    }
+
+    fc.forEach((d, i) => {
+      const cell = document.createElement('div');
+      cell.className = 'cell' + (best && (i === best.i || i === best.i + 1) ? ' win' : '') + (awake(d.t) ? '' : ' dim');
+      cell.style.background = aqiColor(d.est);
+      cell.style.gridColumn = String(i + 1);
+      cell.addEventListener('pointerenter', (ev) => showTip([[fmtTip(d.t), true], [`Expected AQI ~${d.est} · ${catOf(d.est)}`], [`Day's forecast ${d.aqi}, shaped by the usual hourly pattern`, true]], ev.clientX, ev.clientY));
+      cell.addEventListener('pointerleave', hideTip);
+      strip.appendChild(cell);
+      if (i % 3 === 0) {
+        const lbl = document.createElement('span');
+        lbl.className = 'lbl';
+        lbl.style.gridColumn = `${i + 1} / span 3`;
+        lbl.textContent = hourLabel(d.t.getHours());
+        strip.appendChild(lbl);
+      }
+    });
+
+    if (!best) { answer.textContent = 'No daytime hours in the forecast window.'; return; }
+    const start = fc[best.i].t, end = new Date(fc[best.i + 1].t.getTime() + 3600e3);
+    const avg = Math.round(best.avg);
+    const b = (t) => { const e = document.createElement('b'); e.textContent = t; return e; };
+    const chip = document.createElement('span');
+    chip.className = 'chip ' + catClass(catOf(avg));
+    chip.textContent = catOf(avg);
+    answer.append(b(`${d3.timeFormat('%a')(start)} ${hourLabel(start.getHours())}–${hourLabel(end.getHours())}`), ', AQI around ', b(avg), chip);
+  }
+
+  // ---------- weekly heatmap ----------
+  // Colourful ramp stretched over each station's own range, so its bad hours stand out
+  const heatRamp = d3.interpolateRgbBasis(['#2e9e5b', '#a8c94b', '#ecc443', '#ef8a35', '#dc4a3d', '#8e2b5c']);
+
+  function renderHeatmap() {
+    const card = document.getElementById('heatmap');
+    const el = document.getElementById('chart-heatmap');
+    const legend = document.getElementById('heatmap-legend');
+    const rows = (state.data.profile || []).filter((r) => r.station === state.station);
+    card.hidden = !state.data.profile?.length;
+    el.replaceChildren();
+    legend.replaceChildren();
+    if (!rows.length) return;
+    const pollutant = rows[0].pollutant;
+    setText('heatmap-pollutant', pollutant);
+    const byKey = new Map(rows.map((r) => [`${r.dow}-${r.hour}`, r.value]));
+    const [lo, hi] = d3.extent(rows, (r) => r.value);
+    const color = d3.scaleSequential([lo, Math.max(hi, lo + 1)], heatRamp);
+
+    const W = el.clientWidth;
+    const svg = d3.select(el).append('svg').attr('width', '100%');
+    const narrow = W < 640;
+    const labelW = measure(svg, narrow ? DAYS.map((d) => d.slice(0, 3)) : DAYS, '') + 12;
+    const top = 22, cellW = (W - labelW) / 24, cellH = narrow ? 24 : 30, gap = 2;
+    svg.attr('viewBox', `0 0 ${W} ${top + 7 * cellH}`);
+
+    for (let h = 0; h < 24; h += narrow ? 6 : 3) {
+      svg.append('text').attr('class', 'tick-label').attr('x', labelW + h * cellW + cellW / 2).attr('y', 12)
+        .attr('text-anchor', 'middle').text(hourLabel(h));
+    }
+    DAYS.forEach((day, dow) => {
+      svg.append('text').attr('x', labelW - 10).attr('y', top + dow * cellH + cellH / 2).attr('dy', '0.32em')
+        .attr('text-anchor', 'end').attr('font-size', 12).attr('fill', css('--fg')).text(narrow ? day.slice(0, 3) : day);
+    });
+
+    const cells = [];
+    for (let dow = 0; dow < 7; dow++) for (let hour = 0; hour < 24; hour++) {
+      const v = byKey.get(`${dow}-${hour}`);
+      if (v != null) cells.push({ dow, hour, v });
+    }
+    const g = svg.append('g').selectAll('g').data(cells).join('g')
+      .attr('transform', (d) => `translate(${labelW + d.hour * cellW},${top + d.dow * cellH})`);
+    g.append('rect').attr('width', Math.max(1, cellW - gap)).attr('height', cellH - gap).attr('rx', 3)
+      .attr('fill', (d) => color(d.v));
+    if (cellW >= 30) {
+      g.append('text').attr('x', (cellW - gap) / 2).attr('y', (cellH - gap) / 2).attr('dy', '0.35em')
+        .attr('text-anchor', 'middle').attr('font-size', 10).attr('font-family', css('--mono'))
+        .attr('fill', (d) => inkOn(color(d.v))).attr('pointer-events', 'none').text((d) => d.v);
+    }
+    g.on('pointerenter', (ev, d) => showTip([[`${DAYS[d.dow]}, ${hourLabel(d.hour)}`, true], [`Typical ${pollutant} ${d.v} µg/m³`]], ev.clientX, ev.clientY))
+      .on('pointerleave', hideTip);
+
+    const stops = d3.range(0, 1.0001, 0.1).map((t) => `${heatRamp(t)} ${t * 100}%`).join(', ');
+    const stack = document.createElement('div'); stack.className = 'stack';
+    const bar = document.createElement('div'); bar.className = 'bar'; bar.style.background = `linear-gradient(90deg, ${stops})`;
+    const ticks = document.createElement('div'); ticks.className = 'ticks';
+    for (const t of [`${lo} µg/m³ · cleanest`, `worst · ${hi} µg/m³`]) { const sp = document.createElement('span'); sp.textContent = t; ticks.appendChild(sp); }
+    stack.append(bar, ticks);
+    const name = document.createElement('span'); name.textContent = `Typical ${pollutant}`;
+    legend.append(name, stack);
+  }
+
+  // ---------- theme toggle ----------
+  function currentTheme() {
+    return document.documentElement.dataset.theme
+      || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  }
+  function updateToggle() {
+    const next = currentTheme() === 'dark' ? 'light' : 'dark';
+    const btn = document.getElementById('theme-toggle');
+    btn.dataset.next = next;
+    btn.setAttribute('aria-label', `Switch to ${next} theme`);
+    document.getElementById('theme-label').textContent = next === 'light' ? 'Light' : 'Dark';
+  }
+  function toggleTheme() {
+    const next = currentTheme() === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem('theme', next); } catch (e) { /* storage may be blocked */ }
+    updateToggle();
+    if (state.data) renderAll();   // charts read colours from the theme
+  }
+
   // ---------- tables ----------
   function cellRow(values, cls = '') {
     const tr = document.createElement('tr');
@@ -296,7 +444,8 @@
 
   // ---------- wiring ----------
   function renderAll() {
-    renderHeader(); renderForecast(); renderWeather(); renderMap(); renderDrivers(); renderAlerts(); renderMetrics();
+    renderHeader(); renderBestTime(); renderForecast(); renderWeather(); renderMap(); renderDrivers();
+    renderHeatmap(); renderAlerts(); renderMetrics();
   }
 
   function select(station) {
@@ -308,14 +457,15 @@
 
   async function load() {
     const num = (v) => (v === '' || v == null ? null : +v);
-    const [hourly, stations, drivers, metrics, meta] = await Promise.all([
+    const [hourly, stations, drivers, metrics, meta, profile] = await Promise.all([
       d3.csv('data/aqi_hourly.csv', (r) => ({ station: r.station, t: parse(r.ts), kind: r.kind, aqi: num(r.aqi), lo: num(r.aqi_low), hi: num(r.aqi_high), wind: num(r.wind_kmh), hum: num(r.humidity_pct) })),
       d3.csv('data/aqi_stations.csv', (r) => ({ ...r, lat: +r.lat, lon: +r.lon, aqi: +r.aqi, pm25: num(r.pm25), pm10: num(r.pm10) })),
       d3.csv('data/aqi_drivers.csv', (r) => ({ f: r.feature, v: +r.mean_abs_shap })),
       d3.csv('data/aqi_model_metrics.csv', (r) => ({ model: r.model, horizon: r.horizon, mae: +r.mae, rmse: +r.rmse })),
       d3.json('data/meta.json').catch(() => ({ source: 'sample' })),
+      d3.csv('data/aqi_profile.csv', (r) => ({ station: r.station, pollutant: r.pollutant, dow: +r.dow, hour: +r.hour, value: +r.value })).catch(() => []),
     ]);
-    state.data = { hourly, stations, drivers, metrics, meta, summary: summaries(hourly) };
+    state.data = { hourly, stations, drivers, metrics, meta, profile, summary: summaries(hourly) };
 
     const sel = document.getElementById('station');
     sel.replaceChildren(new Option('City average', 'City average'), ...[...stations].sort((a, b) => a.station.localeCompare(b.station)).map((s) => new Option(s.station, s.station)));
@@ -325,8 +475,11 @@
 
     let t;
     window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(renderAll, 150); });
-    window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', renderAll);
+    window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => { updateToggle(); renderAll(); });
   }
+
+  updateToggle();
+  document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
 
   load().catch((err) => {
     const take = document.getElementById('takeaway');

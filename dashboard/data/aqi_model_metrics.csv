@@ -5,6 +5,9 @@ Persistence baseline,72h,21.5,33.7
 Prophet,24h,64.6,115.6
 Prophet,48h,64.6,115.6
 Prophet,72h,64.6,115.6
-LightGBM + weather,24h,14.2,24.5
-LightGBM + weather,48h,16.1,25.9
-LightGBM + weather,72h,18.4,29.5
+LightGBM + weather,24h,14.1,24.7
+LightGBM + weather,48h,16.3,26.2
+LightGBM + weather,72h,19.0,30.2
+LightGBM without neighbour data,24h,14.2,24.5
+LightGBM without neighbour data,48h,16.1,25.9
+LightGBM without neighbour data,72h,18.4,29.5

@@ -5,6 +5,7 @@ Writes to dashboard/data/:
   aqi_stations.csv       current reading, category and advice per station
   aqi_drivers.csv        SHAP feature importance
   aqi_model_metrics.csv  model comparison
+  aqi_profile.csv        typical hourly PM2.5 (or PM10) by weekday and hour per station
   meta.json              data source and generation time
 """
 import json
@@ -82,6 +83,21 @@ def main(source="live"):
     st_df = pd.DataFrame(st_rows)
     st_df[["pm25", "pm10"]] = st_df[["pm25", "pm10"]].astype("Int64")   # whole numbers, blank if missing
     st_df.to_csv(DASHBOARD_DATA / "aqi_stations.csv", index=False)
+    # Typical hourly pollution by weekday and hour, for the heatmap and the best-time card.
+    # AQI is a 24-hour average and barely moves hour to hour, so this uses raw hourly PM2.5
+    # (PM10 for stations without a PM2.5 sensor), which shows the daily rhythm clearly.
+    hist = df[["station", "ts", "pm25", "pm10"]].copy()
+    has25 = hist.groupby("station")["pm25"].transform(lambda v: v.notna().mean() > 0.5)
+    hist["value"] = np.where(has25, hist["pm25"], hist["pm10"])
+    hist["pollutant"] = np.where(has25, "PM2.5", "PM10")
+    hist = hist.dropna(subset=["value"])
+    city = (hist[hist["pollutant"] == "PM2.5"].groupby("ts", as_index=False)["value"].mean()
+            .assign(station="City average", pollutant="PM2.5"))
+    hist = pd.concat([hist[["station", "ts", "value", "pollutant"]], city], ignore_index=True)
+    profile = (hist.assign(dow=hist["ts"].dt.dayofweek, hour=hist["ts"].dt.hour)
+               .groupby(["station", "pollutant", "dow", "hour"], as_index=False)["value"].mean())
+    profile["value"] = profile["value"].round().astype(int)
+    profile.to_csv(DASHBOARD_DATA / "aqi_profile.csv", index=False)
     shutil.copy(MODEL_DIR / "shap.csv", DASHBOARD_DATA / "aqi_drivers.csv")
     shutil.copy(MODEL_DIR / "metrics.csv", DASHBOARD_DATA / "aqi_model_metrics.csv")
     (DASHBOARD_DATA / "meta.json").write_text(json.dumps({

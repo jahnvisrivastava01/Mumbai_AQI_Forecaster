@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 
 from .config import MODEL_DIR, ORIGIN_STEP_HOURS, TEST_DAYS
-from .features import FEATURE_LABELS, FEATURES, load_raw, make_rows, prepare
+from .features import FEATURE_LABELS, FEATURES, NEIGHBOUR_FEATURES, load_raw, make_rows, prepare
 
 POINT_PARAMS = dict(objective="l2", n_estimators=700, learning_rate=0.04, num_leaves=31,
                     min_child_samples=80, subsample=0.8, subsample_freq=1, colsample_bytree=0.8,
@@ -92,6 +92,17 @@ def main():
     metrics += scores(yte.to_numpy(), test["persist"].to_numpy(), test["horizon"].to_numpy(), "Persistence baseline")
     metrics += prophet_scores(df, split, test)
     metrics += scores(yte.to_numpy(), base_te + point.predict(Xte), test["horizon"].to_numpy(), "LightGBM + weather")
+
+    # Ablation: the same model without neighbour-station features, to measure what they add
+    no_nbr = [f for f in FEATURES if f not in NEIGHBOUR_FEATURES]
+    ablation = lgb.LGBMRegressor(**dict(POINT_PARAMS, n_estimators=best_n)).fit(
+        Xtr[no_nbr], ytr, categorical_feature=cat)
+    abl_scores = scores(yte.to_numpy(), base_te + ablation.predict(Xte[no_nbr]), test["horizon"].to_numpy(),
+                        "LightGBM without neighbour data")
+    metrics += abl_scores
+    m_with = {r["horizon"]: r["mae"] for r in metrics if r["model"] == "LightGBM + weather"}
+    m_without = {r["horizon"]: r["mae"] for r in abl_scores}
+    nbr_gain = {h: round(100 * (1 - m_with[h] / m_without[h]), 1) for h in m_with if m_without.get(h)}
     lo, hi = base_te + q10.predict(Xte), base_te + q90.predict(Xte)
     coverage = float(((yte >= lo) & (yte <= hi)).mean())
 
@@ -103,7 +114,7 @@ def main():
     (MODEL_DIR / "train_info.json").write_text(json.dumps({
         "split": str(split), "train_rows": len(train), "test_rows": len(test),
         "interval_coverage_10_90": round(coverage, 3), "features": FEATURES,
-        "stations": station_names,
+        "stations": station_names, "neighbour_mae_reduction_pct": nbr_gain,
     }, indent=2))
 
     # SHAP: mean |contribution| per feature, in AQI points
@@ -116,6 +127,8 @@ def main():
 
     print(pd.DataFrame(metrics).to_string(index=False))
     print(f"10-90% interval coverage on test: {coverage:.0%} (ideal ~80%)")
+    print("Neighbour features change MAE by: " + ", ".join(
+        f"{h} {'-' if g >= 0 else '+'}{abs(g)}%" for h, g in nbr_gain.items()) + "  (minus = better)")
 
 
 if __name__ == "__main__":
