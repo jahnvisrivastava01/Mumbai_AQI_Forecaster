@@ -1,0 +1,33 @@
+station,area,lat,lon,aqi,pm25,pm10,dominant,category,advice
+"Colaba, Mumbai",Colaba,18.91,72.82,38,,38,PM10,Good,No precautions needed
+"Mahape, Navi Mumbai",Mahape,19.1135051,73.008978,29,17,,PM2.5,Good,No precautions needed
+"Kurla, Mumbai",Kurla,19.0863,72.8888,92,42,92,PM10,Satisfactory,Sensitive groups: limit long outdoor exertion
+"Powai, Mumbai",Powai,19.1375,72.915056,73,26,73,PM10,Satisfactory,Sensitive groups: limit long outdoor exertion
+"Siddharth Nagar-Worli, Mumbai",Siddharth Nagar-Worli,19.000083,72.813993,74,17,74,PM10,Satisfactory,Sensitive groups: limit long outdoor exertion
+"Borivali East, Mumbai",Borivali East,19.227474,72.864394,45,27,,PM2.5,Good,No precautions needed
+"Sion, Mumbai",Sion,19.047,72.8746,34,20,,PM2.5,Good,No precautions needed
+Mumbai,Mumbai,19.07283,72.88261,94,56,,PM2.5,Satisfactory,Sensitive groups: limit long outdoor exertion
+"Borivali East, Mumbai (2)",Borivali East,19.23241,72.86895,74,,74,PM10,Satisfactory,Sensitive groups: limit long outdoor exertion
+"Malad West, Mumbai",Malad West,19.19709,72.82204,93,36,93,PM10,Satisfactory,Sensitive groups: limit long outdoor exertion
+"Chakala-Andheri East, Mumbai",Chakala-Andheri East,19.11074,72.86084,66,34,66,PM10,Satisfactory,Sensitive groups: limit long outdoor exertion
+"Khindipada-Bhandup West, Mumbai",Khindipada-Bhandup West,19.164394,72.928297,58,27,58,PM10,Satisfactory,Sensitive groups: limit long outdoor exertion
+"Mulund West, Mumbai",Mulund West,19.175,72.9419,97,,97,PM10,Satisfactory,Sensitive groups: limit long outdoor exertion
+"Pimpleshwar Mandir, Thane",Pimpleshwar Mandir,19.192056,72.9585188,52,9,52,PM10,Satisfactory,Sensitive groups: limit long outdoor exertion
+"Worli, Mumbai",Worli,18.9936162,72.8128113,44,21,44,PM10,Good,No precautions needed
+"Deonar, Mumbai",Deonar,19.04946,72.923,55,32,55,PM10,Satisfactory,Sensitive groups: limit long outdoor exertion
+"Kasarvadavali, Thane",Kasarvadavali,19.26777,72.97182,98,35,98,PM10,Satisfactory,Sensitive groups: limit long outdoor exertion
+"Sector-2E Kalamboli, Navi Mumbai",Sector-2E Kalamboli,19.02579,73.10297,59,25,59,PM10,Satisfactory,Sensitive groups: limit long outdoor exertion
+"Upvan Fort, Thane",Upvan Fort,19.222279,72.957979,59,24,59,PM10,Satisfactory,Sensitive groups: limit long outdoor exertion
+"CBD Belapur, Belapur",CBD Belapur,19.0243902,73.0406721,78,32,78,PM10,Satisfactory,Sensitive groups: limit long outdoor exertion
+"Kopripada-Vashi, Navi Mumbai",Kopripada-Vashi,19.090337,73.014232,87,52,83,PM2.5,Satisfactory,Sensitive groups: limit long outdoor exertion
+"Bhayandar West, Mira-Bhayandar",Bhayandar West,19.296481,72.840923,57,28,57,PM10,Satisfactory,Sensitive groups: limit long outdoor exertion
+"Mindspace-Malad West, Mumbai",Mindspace-Malad West,19.1878657,72.8304069,72,32,72,PM10,Satisfactory,Sensitive groups: limit long outdoor exertion
+"Bandra Kurla Complex, Mumbai",Bandra Kurla Complex,19.065931,72.862131,94,56,87,PM2.5,Satisfactory,Sensitive groups: limit long outdoor exertion
+"Chembur, Mumbai",Chembur,19.0364585,72.8954371,57,28,57,PM10,Satisfactory,Sensitive groups: limit long outdoor exertion
+"Gokul Nagar, Bhiwandi",Gokul Nagar,19.309073,73.057223,126,35,139,PM10,Moderate,Asthma and heart patients: reduce outdoor activity
+"Kherwadi_Bandra East, Mumbai",Kherwadi_Bandra East,19.0632143,72.8456324,80,31,80,PM10,Satisfactory,Sensitive groups: limit long outdoor exertion
+"Byculla, Mumbai",Byculla,18.9767,72.838,43,13,43,PM10,Good,No precautions needed
+"Shivaji Nagar, Mumbai",Shivaji Nagar,19.060498,72.923356,59,31,59,PM10,Satisfactory,Sensitive groups: limit long outdoor exertion
+"Kandivali West, Mumbai",Kandivali West,19.215859,72.831718,54,27,54,PM10,Satisfactory,Sensitive groups: limit long outdoor exertion
+"Sewri, Mumbai",Sewri,19.000084,72.85673,51,25,51,PM10,Satisfactory,Sensitive groups: limit long outdoor exertion
+"Ghatkopar, Mumbai",Ghatkopar,19.083694,72.920967,57,18,57,PM10,Satisfactory,Sensitive groups: limit long outdoor exertion

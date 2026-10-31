@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mumbai AQI Forecaster</title>
+  <meta name="description" content="72-hour air quality forecasts for Mumbai monitoring stations, with LightGBM and weather inputs.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="page">
+    <header class="head">
+      <div class="head-text">
+        <p class="eyebrow">Air quality forecast · Mumbai</p>
+        <h1>Mumbai AQI Forecaster</h1>
+        <p class="take" id="takeaway">Loading data…</p>
+        <p class="source" id="source-note"></p>
+      </div>
+      <label class="control" for="station">Station
+        <select id="station"></select>
+      </label>
+    </header>
+
+    <section class="tiles" aria-label="Headline figures">
+      <div class="tile">
+        <span class="tile-label">AQI now</span>
+        <div class="big"><span id="t-current">—</span><span class="chip" id="t-current-cat"></span></div>
+        <p class="note">Latest hourly reading, Indian AQI scale (0–500)</p>
+      </div>
+      <div class="tile">
+        <span class="tile-label">Forecast peak, next 24 hours</span>
+        <div class="big"><span id="t-peak">—</span><span class="chip" id="t-peak-cat"></span></div>
+        <p class="note">Expected around <b id="t-peak-time">—</b></p>
+      </div>
+      <div class="tile">
+        <span class="tile-label">Stations at Poor or worse</span>
+        <div class="big"><span id="t-poor">—</span></div>
+        <p class="note">Worst now: <b id="t-worst">—</b></p>
+      </div>
+      <div class="tile">
+        <span class="tile-label">24-hour forecast error (MAE)</span>
+        <div class="big"><span id="t-mae">—</span></div>
+        <p class="note" id="t-lift">—</p>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="card wide" id="forecast">
+        <h2>Forecast vs measured AQI</h2>
+        <p>Last 72 hours measured, next 72 hours forecast by the LightGBM model. The shaded band is the 10th to 90th percentile forecast range.</p>
+        <div class="legend">
+          <span><i class="sw sw-act"></i>Measured</span>
+          <span><i class="sw sw-fc"></i>Forecast</span>
+          <span><i class="sw sw-band"></i>Forecast range</span>
+        </div>
+        <div class="chart h-forecast" id="chart-forecast"></div>
+      </article>
+
+      <article class="card" id="map">
+        <h2>Station map</h2>
+        <p>Monitoring stations placed by latitude and longitude, colored by current AQI category. Click a station to see its forecast.</p>
+        <div class="chart h-map" id="chart-map"></div>
+      </article>
+
+      <article class="card" id="drivers">
+        <h2>What drives the forecast</h2>
+        <p>Mean absolute SHAP value per feature: how many AQI points each one moves a typical prediction.</p>
+        <div class="chart" id="chart-drivers"></div>
+      </article>
+
+      <article class="card wide" id="weather">
+        <h2>Weather inputs</h2>
+        <p>Wind clears pollution; humid, still nights trap it. Forecast hours use the Open-Meteo weather forecast.</p>
+        <div class="chart h-weather" id="chart-weather"></div>
+      </article>
+
+      <article class="card wide" id="alerts">
+        <h2>Health alerts by area</h2>
+        <p>Current reading at every station, worst first, with CPCB health advice. Click a row to see that station's forecast.</p>
+        <div class="tablewrap">
+          <table class="table">
+            <thead><tr><th>Station</th><th class="hide-narrow">Area</th><th class="num">AQI</th><th>Category</th><th class="hide-narrow">Main pollutant</th><th>Advice</th></tr></thead>
+            <tbody id="alerts-body"></tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="card wide" id="models">
+        <h2>Model comparison</h2>
+        <p>Error on the most recent 14 days, held out from training, in AQI points (lower is better). Persistence repeats the same hour from the last observed day. Best model per horizon in bold.</p>
+        <div class="tablewrap">
+          <table class="table">
+            <thead><tr><th>Model</th><th>Horizon</th><th class="num">MAE</th><th class="num">RMSE</th></tr></thead>
+            <tbody id="metrics-body"></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <footer class="foot">
+      <p>Data: <a href="https://openaq.org" target="_blank" rel="noopener">OpenAQ</a> (CPCB / MPCB monitors) and <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>. AQI follows the CPCB National Air Quality Index. Built by Jahnvi Srivastava.</p>
+    </footer>
+  </main>
+  <div class="tip" id="tip" hidden></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

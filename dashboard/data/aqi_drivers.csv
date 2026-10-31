@@ -1,0 +1,11 @@
+feature,mean_abs_shap
+"Same hour, previous day",10.6
+Station location,3.8
+3-hour AQI trend,3.5
+Day of week,2.2
+Land breeze (wind from east),1.6
+Wind from north,1.6
+Relative humidity,1.4
+Temperature,1.1
+PM2.5 now,1.0
+24-hour average AQI,0.6

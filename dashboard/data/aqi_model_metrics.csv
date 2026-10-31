@@ -1,0 +1,10 @@
+model,horizon,mae,rmse
+Persistence baseline,24h,16.4,29.2
+Persistence baseline,48h,18.4,29.7
+Persistence baseline,72h,21.5,33.7
+Prophet,24h,64.6,115.6
+Prophet,48h,64.6,115.6
+Prophet,72h,64.6,115.6
+LightGBM + weather,24h,14.2,24.5
+LightGBM + weather,48h,16.1,25.9
+LightGBM + weather,72h,18.4,29.5

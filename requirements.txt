@@ -1,0 +1,9 @@
+pandas>=2.1
+numpy>=1.26
+requests>=2.31
+lightgbm>=4.3
+scikit-learn>=1.4
+shap>=0.45
+python-dotenv>=1.0
+# Optional baseline:
+# prophet>=1.1
